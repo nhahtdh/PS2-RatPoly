@@ -32,7 +32,6 @@
         expt = e;
     }
     [self checkRep];
-    NSLog(@"%@ %d\n", [coeff stringValue], expt);
     return self;
 }
 
@@ -167,13 +166,35 @@
     } else if (self.expt == 1) {
         if ([self.coeff isEqual:[[RatNum alloc] initWithInteger:1]])
             return @"x";
+        else if ([self.coeff isEqual:[[RatNum alloc] initWithInteger:-1]])
+            return @"-x";
         else 
-            return [NSString stringWithFormat:@"%@%@", [self.coeff stringValue], @"*x"];
+            return [NSString stringWithFormat:@"%@*x", [self.coeff stringValue]];
     } else {
         if ([self.coeff isEqual:[[RatNum alloc] initWithInteger:1]])
-            return [NSString stringWithFormat:@"%@%d", @"x^", self.expt];
+            return [NSString stringWithFormat:@"x^%d", self.expt];
+        else if ([self.coeff isEqual:[[RatNum alloc] initWithInteger:-1]])
+            return [NSString stringWithFormat:@"-x^%d", self.expt];
         else 
-            return [NSString stringWithFormat:@"%@%@%d", [self.coeff stringValue], @"*x^", self.expt];
+            return [NSString stringWithFormat:@"%@*x^%d", [self.coeff stringValue], self.expt];
+    }
+}
+
++(RatNum*) parseCoeff:(NSString*)str {
+    if ([str isEqual:@""]) {
+        return [[RatNum alloc] initWithInteger:1];
+    } else if ([str isEqual:@"-"]) {
+        return [[RatNum alloc] initWithInteger:-1];
+    } else {
+        return [RatNum valueOf: [str substringToIndex: str.length - 1]];
+    }
+}
+
++(int) parseExpt:(NSString*) str {
+    if ([str isEqual:@""]) {
+        return 1;
+    } else {
+        return [[str substringFromIndex:1] intValue];
     }
 }
 
@@ -188,13 +209,16 @@
     if ([str isEqual:@"NaN"])
         return [RatTerm initNaN];
     else {
-        if ([str rangeOfString:@"x"].length > 0) {
+        if ([str rangeOfString:@"x" options:NSLiteralSearch range:NSMakeRange(0, str.length)].location != NSNotFound) {
             NSArray *tokens = [str componentsSeparatedByString:@"x"];
-            if ([tokens count] == 1) {
-                
-            }
+            NSLog(@"Content: %@", [tokens description]);
+            RatNum *c = [RatTerm parseCoeff: [tokens objectAtIndex: 0]];
+            int e = [RatTerm parseExpt: [tokens objectAtIndex: 1]];
+            NSLog(@"*** Value: %@ %d", [c stringValue], e);
+            return [[RatTerm alloc] initWithCoeff:c Exp:e];
         } else {
-            return [[RatTerm alloc] initWithCoeff:[[RatNum alloc] initWithInteger: [str intValue]] Exp: 1];
+            NSLog(@"Not found: %@", str);
+            return [[RatTerm alloc] initWithCoeff:[RatNum valueOf: str] Exp: 0];
         }
     }
 }

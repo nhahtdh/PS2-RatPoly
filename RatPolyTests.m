@@ -13,7 +13,17 @@
 
 @implementation RatPolyTests
 
+int numTerms(RatPoly* poly) {
+    return (int) poly.terms.count;
+}
+
 -(void)setUp{
+}
+
+-(void)testDefCtor {
+    RatPoly *poly = [[RatPoly alloc] init];
+    STAssertEquals(numTerms(poly), 0, @"", @"");
+    STAssertEquals([poly degree], 0, @"", @"");
 }
 
 -(void)tearDown{

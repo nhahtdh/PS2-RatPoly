@@ -10,22 +10,43 @@
 -(int)degree{ // 5 points
     // EFFECTS: returns the degree of this RatPoly object. 
     
-	//i'm just a skeleton here, do fill me up please, or
-	//I'll throw an exception to remind you of my existence. muahaha
-	[NSException raise:@"RatPoly degree not implemented" format:@"fill me up plz!"];
+	if (terms.count == 0)
+        return 0;
+    else {
+        return ((RatTerm*) [terms objectAtIndex: 0]).expt;
+    }
 }
 
 // Check that the representation invariant is satisfied
 -(void)checkRep{ // 5 points
-	//i'm just a skeleton here, do fill me up please, or
-	//I'll throw an exception to remind you of my existence. muahaha
-	[NSException raise:@"RatPoly checkRep not implemented" format:@"fill me up plz!"];
+    if (terms == nil)
+        [NSException raise: @"RatPoly invariant violated" format: @"Nil terms array"];
+    
+	int i;
+    int currExpt;
+    for (i = 0; i < terms.count; i++) {
+        RatTerm *t;
+        t = [terms objectAtIndex: i];
+        
+        if (t == nil)
+            [NSException raise: @"RatPoly invariant violated" format: @"Nil term"];
+        if ([t.coeff isEqual: [RatTerm initZERO]])
+            [NSException raise: @"RatPoly invariant violated" format: @"Zero term"];
+        if (t.expt < 0)
+            [NSException raise: @"RatPoly invariant violated" format: @"Negative exponent"];
+        if (i > 0 && currExpt <= t.expt)
+            [NSException raise: @"RatPoly invariant violated" format: @"Non-descending exponent order"];
+        
+        currExpt = t.expt;
+    }
 }
 
 -(id)init { // 5 points
     //EFFECTS: constructs a polynomial with zero terms, which is effectively the zero polynomial
     //           remember to call checkRep to check for representation invariant
-    
+    terms = [[NSArray alloc] init];
+    [self checkRep];
+    return self;
 }
 
 -(id)initWithTerm:(RatTerm*)rt{ // 5 points
@@ -256,7 +277,7 @@
         These 2 lines may result in overflow, even in the original version.
         long a = self.numer * otherRatNum.denom;
         long b = otherRatNum.numer * self.denom;)
-    // Incomplete
+    // TODO: Incomplete
  
  Question 2(d)
  ========
@@ -292,7 +313,7 @@
  If coefficient is 0, which means the term is 0, it is safe to set the exponent to 0
  to make the implementation of other functions easier.
  
- The first one is no good, since it will not allow constant to be a term.
+ The first one is no good, since it will not allow constant to be a term. // TODO: Check this again!
  
  Question 5: Reflection (Bonus Question)
  ==========================

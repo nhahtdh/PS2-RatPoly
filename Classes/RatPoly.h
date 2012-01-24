@@ -43,8 +43,7 @@
 // * No term in a RatPoly has a negative exponent.
 // * The terms in a RatPoly are sorted in descending exponent order.
 // (It is implied that 'terms' does not contain any null elements by the
-// above
-// invariant.)	
+// above invariant.)	
 }
 
 @property (readonly) NSArray* terms;
