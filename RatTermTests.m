@@ -111,7 +111,6 @@ RatTerm* term3(int numer, int denom, int expt) {
 }
 				   
 -(void)testValueOf:(NSString*)actual :(RatTerm*)target{
-    NSLog(@"Test: %@ %@", target.stringValue, [RatTerm valueOf:actual].stringValue);
 	STAssertEqualObjects(target, [RatTerm valueOf:actual], @"", @"");
 }
 				   

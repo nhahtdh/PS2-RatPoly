@@ -211,13 +211,10 @@
     else {
         if ([str rangeOfString:@"x" options:NSLiteralSearch range:NSMakeRange(0, str.length)].location != NSNotFound) {
             NSArray *tokens = [str componentsSeparatedByString:@"x"];
-            NSLog(@"Content: %@", [tokens description]);
             RatNum *c = [RatTerm parseCoeff: [tokens objectAtIndex: 0]];
             int e = [RatTerm parseExpt: [tokens objectAtIndex: 1]];
-            NSLog(@"*** Value: %@ %d", [c stringValue], e);
             return [[RatTerm alloc] initWithCoeff:c Exp:e];
         } else {
-            NSLog(@"Not found: %@", str);
             return [[RatTerm alloc] initWithCoeff:[RatNum valueOf: str] Exp: 0];
         }
     }
