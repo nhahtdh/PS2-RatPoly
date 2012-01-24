@@ -245,9 +245,18 @@
  Question 2(c)
  ========
  
- List of functions that need to be changed:
- checkRep: remove the whole clause: if (denom > 0) { ... }
+ To minimize the amount of changes to comply with the new requirement, we only
+ modify the functions so that it works with all the inputs under the new
+ requirement. There is no need to remove the code to simplify the rational 
+ number.
  
+ List of methods that need to be changed:
+    checkRep: remove the whole clause: if (denom > 0) { ... }
+    (compareTo:
+        These 2 lines may result in overflow, even in the original version.
+        long a = self.numer * otherRatNum.denom;
+        long b = otherRatNum.numer * self.denom;)
+    // Incomplete
  
  Question 2(d)
  ========
@@ -257,12 +266,18 @@
  Question 3(a)
  ========
  
- <Your answer here>
+ In the case of RatTerm class, only at the end of the constructors. The RatTerm class
+ is immutable, so the constructors are the only places the value of the rep can be
+ modified.
  
  Question 3(b)
  ========
  
- <Your answer here>
+ If the class is already implemented, we can enforce the old invariants on the exit
+ to reduce the amount of modifications (as long as there is no conflict).
+ 
+ List of methods that need to be changed:
+ 
  
  Question 3(c)
  ========
@@ -272,7 +287,12 @@
  Question 3(d)
  ========
  
- <Your answer here>
+ Only the second one.
+ 
+ If coefficient is 0, which means the term is 0, it is safe to set the exponent to 0
+ to make the implementation of other functions easier.
+ 
+ The first one is no good, since it will not allow constant to be a term.
  
  Question 5: Reflection (Bonus Question)
  ==========================
@@ -286,6 +306,12 @@
  
  (c) What could the CS3217 teaching staff have done better to improve your learning experience in this problem set?
  
- <Your answer here>
+ This mode of learning is good. I can learn a lot of things myself at my own speed. The examples provided are
+ good reference when learning a new language.
+ 
+ However, there are some points I would like to comment on:
+ - Please clean up the comments from the last year to avoid confusion.
+ - Please list out the changes that have been made to the source code. It is very annoying every time the source code 
+ is reuploaded to the workbin, but we don't know about the changes in the code.
  
  */

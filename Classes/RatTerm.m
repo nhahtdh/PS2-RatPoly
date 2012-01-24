@@ -32,29 +32,30 @@
         expt = e;
     }
     [self checkRep];
+    NSLog(@"%@ %d\n", [coeff stringValue], expt);
     return self;
 }
 
 +(id)initZERO { // 5 points
     // EFFECTS: returns a zero ratterm
-    
+    return [[RatTerm alloc] initWithCoeff:[RatNum initZERO] Exp:0];
 }
 
 +(id)initNaN { // 5 points
     // EFFECTS: returns a nan ratterm
-    
+    return [[RatTerm alloc] initWithCoeff:[RatNum initNaN] Exp:0];
 }
 
 -(BOOL)isNaN { // 5 points
     // REQUIRES: self != nil
     // EFFECTS: return YES if and only if coeff is NaN
-    
+    return [coeff isNaN];
 }
 
 -(BOOL)isZero { // 5 points
     // REQUIRES: self != nil
     // EFFECTS: return YES if and only if coeff is zero
-    
+    return [coeff isEqual:[RatNum initZERO]];
 }
 
 
@@ -65,12 +66,25 @@
     //            'd'. For example, "3*x^2" evaluated at 2 is 12. if 
     //            [self isNaN] returns YES, return NaN
     
+    if (self.isNaN) {
+        return NAN;
+    } else {
+        if (self.expt == 0)
+            return [self.coeff doubleValue];
+        else {
+            return pow(d, self.expt) * [self.coeff doubleValue];
+        }
+    }
 }
 
 -(RatTerm*)negate{ // 5 points
     // REQUIRES: self != nil 
     // EFFECTS: return the negated term, return NaN if the term is NaN
-    
+    if (self.isNaN) {
+        return self;
+    } else {
+        return [[RatTerm alloc] initWithCoeff:[self.coeff negate] Exp: self.expt];
+    }
 }
 
 
@@ -82,7 +96,21 @@
     // EFFECTS: returns a RatTerm equals to (self + arg). If either argument is NaN, then returns NaN.
     //            throws NSException if (self.expt != arg.expt) and neither argument is zero or NaN.
     
-    
+    if ([self isNaN] || [arg isNaN]) {
+        return [RatTerm initNaN];
+    } else if (self.expt != arg.expt) {
+        if ([self isZero]) {
+            return arg;
+        } else if ([arg isZero]) {
+            return self;
+        } else {
+            @throw [NSException exceptionWithName: @"RatTerm add error" 
+                                           reason: @"Cannot add two valid terms with different exponent"
+                                         userInfo: nil];
+        }
+    } else {
+        return [[RatTerm alloc] initWithCoeff:[self.coeff add:arg.coeff] Exp:self.expt];
+    }
 }
 
 
@@ -93,7 +121,7 @@
     // EFFECTS: returns a RatTerm equals to (self - arg). If either argument is NaN, then returns NaN.
     //            throws NSException if (self.expt != arg.expt) and neither argument is zero or NaN.
     
-    
+    return [self add:[arg negate]];
 }
 
 
@@ -102,6 +130,7 @@
     // REQUIRES: arg != null, self != nil
     // EFFECTS: return a RatTerm equals to (self*arg). If either argument is NaN, then return NaN
     
+    return [[RatTerm alloc] initWithCoeff:[self.coeff mul: arg.coeff] Exp: self.expt + arg.expt];
 }
 
 
@@ -110,6 +139,7 @@
     // REQUIRES: arg != null, self != nil
     // EFFECTS: return a RatTerm equals to (self/arg). If either argument is NaN, then return NaN
     
+    return [[RatTerm alloc] initWithCoeff:[self.coeff div:arg.coeff] Exp: self.expt - arg.expt];
 }
 
 
@@ -130,7 +160,21 @@
     // 
     //          Valid example outputs include "3/2*x^2", "-1/2", "0", and "NaN".
     
-    
+    if ([self isNaN]) {
+        return @"NaN";
+    } else if (self.expt == 0) {
+        return [self.coeff stringValue];
+    } else if (self.expt == 1) {
+        if ([self.coeff isEqual:[[RatNum alloc] initWithInteger:1]])
+            return @"x";
+        else 
+            return [NSString stringWithFormat:@"%@%@", [self.coeff stringValue], @"*x"];
+    } else {
+        if ([self.coeff isEqual:[[RatNum alloc] initWithInteger:1]])
+            return [NSString stringWithFormat:@"%@%d", @"x^", self.expt];
+        else 
+            return [NSString stringWithFormat:@"%@%@%d", [self.coeff stringValue], @"*x^", self.expt];
+    }
 }
 
 // Build a new RatTerm, given a descriptive string.
@@ -141,6 +185,18 @@
     //             Valid inputs include "0", "x", "-5/3*x^3", and "NaN"
     // EFFECTS: returns a RatTerm t such that [t stringValue] = str
     
+    if ([str isEqual:@"NaN"])
+        return [RatTerm initNaN];
+    else {
+        if ([str rangeOfString:@"x"].length > 0) {
+            NSArray *tokens = [str componentsSeparatedByString:@"x"];
+            if ([tokens count] == 1) {
+                
+            }
+        } else {
+            return [[RatTerm alloc] initWithCoeff:[[RatNum alloc] initWithInteger: [str intValue]] Exp: 1];
+        }
+    }
 }
 
 //  Equality test,
@@ -149,7 +205,14 @@
     // EFFECTS: returns YES if "obj" is an instance of RatTerm, which represents
     //            the same RatTerm as self.
     
+    if ([obj isKindOfClass:[RatTerm class]]) {
+        RatTerm *term = (RatTerm*) obj;
+        if ([self isNaN] && [obj isNaN])
+            return YES;
+        return [self.coeff isEqual:term.coeff] && self.expt == term.expt;
+    }
     
+    return NO;
 }
 
 @end
