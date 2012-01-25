@@ -144,7 +144,8 @@ RatTerm* term3(int numer, int denom, int expt) {
 }
 
 -(void)testValueOfNaN{
-	[self testValueOf:@"NaN" :term3(1, 0, 0)];    
+	[self testValueOf:@"NaN" :term3(1, 0, 0)];   
+    [self testValueOf:@"NaN*x^5": term3(1, 0, 5)];
 }
 -(void)testValueOfZero{
 	[self testValueOf:@"0" :term(0, 0)];
@@ -250,10 +251,8 @@ RatTerm* term3(int numer, int denom, int expt) {
 }
 
 BOOL addDifferentExpts(RatTerm *arg1, RatTerm *arg2) {
-	NSLog(@"on it");
 	@try {
 		[arg1 add:arg2];
-		NSLog(@"muahahaha");
 		return NO;
 	}@catch (id e) {
 		return YES;

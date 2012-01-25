@@ -10,10 +10,10 @@
 -(int)degree{ // 5 points
     // EFFECTS: returns the degree of this RatPoly object. 
     
-	if (terms.count == 0)
+	if (self.terms.count == 0)
         return 0;
     else {
-        return ((RatTerm*) [terms objectAtIndex: 0]).expt;
+        return ((RatTerm*) [self.terms objectAtIndex: 0]).expt;
     }
 }
 
@@ -23,28 +23,27 @@
         [NSException raise: @"RatPoly invariant violated" format: @"Nil terms array"];
     
 	int i;
-    int currExpt;
+    int prevExpt;
     for (i = 0; i < terms.count; i++) {
-        RatTerm *t;
-        t = [terms objectAtIndex: i];
-        
+        RatTerm *t = [terms objectAtIndex: i];
+        /*
         if (t == nil)
-            [NSException raise: @"RatPoly invariant violated" format: @"Nil term"];
-        if ([t.coeff isEqual: [RatTerm initZERO]])
+            [NSException raise: @"RatPoly invariant violated" format: @"Nil term at index %d", i]; */
+        if ([t.coeff isEqual: [RatNum initZERO]])
             [NSException raise: @"RatPoly invariant violated" format: @"Zero term"];
         if (t.expt < 0)
-            [NSException raise: @"RatPoly invariant violated" format: @"Negative exponent"];
-        if (i > 0 && currExpt <= t.expt)
+            [NSException raise: @"RatPoly invariant violated" format: @"Negative exponent: %d", t.expt];
+        if (i > 0 && prevExpt <= t.expt)
             [NSException raise: @"RatPoly invariant violated" format: @"Non-descending exponent order"];
         
-        currExpt = t.expt;
+        prevExpt = t.expt;
     }
 }
 
 -(id)init { // 5 points
     //EFFECTS: constructs a polynomial with zero terms, which is effectively the zero polynomial
     //           remember to call checkRep to check for representation invariant
-    terms = [[NSArray alloc] init];
+    terms = [NSArray array];
     [self checkRep];
     return self;
 }
@@ -54,7 +53,14 @@
     //  EFFECTS: constructs a new polynomial equal to rt. if rt's coefficient is zero, constructs
     //             a zero polynomial remember to call checkRep to check for representation invariant
     
+    if ([rt.coeff isEqual:[RatNum initZERO]]) {
+        terms = [NSArray array];
+    } else {
+        terms = [NSArray arrayWithObject:rt];
+    }
     
+    [self checkRep];
+    return self;
 }
 
 -(id)initWithTerms:(NSArray*)ts{ // 5 points
@@ -62,21 +68,34 @@
     // EFFECTS: constructs a new polynomial using "ts" as part of the representation.
     //            the method does not make a copy of "ts". remember to call checkRep to check for representation invariant
     
-    
+    terms = ts;
+    [self checkRep];
+    return self;
 }
 
 -(RatTerm*)getTerm:(int)deg { // 5 points
     // REQUIRES: self != nil && ![self isNaN]
     // EFFECTS: returns the term associated with degree "deg". If no such term exists, return
     //            the zero RatTerm
-    
+    for (RatTerm *t in self.terms) {
+        if (t.expt == deg) {
+            return t;
+        } else if (t.expt < deg) {
+            break;
+        }
+    }
+    return [RatTerm initZERO];
 }
 
 -(BOOL)isNaN { // 5 points
     // REQUIRES: self != nil
     //  EFFECTS: returns YES if this RatPoly is NaN
     //             i.e. returns YES if and only if some coefficient = "NaN".
-    
+    for (RatTerm *t in self.terms) {
+        if ([t.coeff isNaN])
+            return YES;
+    }
+    return NO;
 }
 
 
@@ -85,7 +104,11 @@
     // EFFECTS: returns the additive inverse of this RatPoly.
     //            returns a RatPoly equal to "0 - self"; if [self isNaN], returns
     //            some r such that [r isNaN]
-    
+    NSMutableArray *arr = [[NSMutableArray alloc] init];
+    for (RatTerm *t in self.terms) {
+        [arr addObject: [t negate]];
+    }
+    return [[RatPoly alloc] initWithTerms: [NSArray arrayWithArray:arr]];
 }
 
 
@@ -95,6 +118,38 @@
     // EFFECTS: returns a RatPoly r, such that r=self+p; if [self isNaN] or [p isNaN], returns
     //            some r such that [r isNaN]
     
+    NSMutableArray *result = [NSMutableArray array];
+    int i, j;
+    for (i = 0, j = 0; i < self.terms.count && j < p.terms.count; ) {
+        RatTerm *u = [self.terms objectAtIndex:i];
+        RatTerm *v = [p.terms objectAtIndex:j];
+        if (u.expt != v.expt) {
+            if (u.expt > v.expt) {
+                [result addObject: u];
+                i++;
+            } else {
+                [result addObject: v];
+                j++;
+            }
+        } else {
+            RatTerm *sum = [u add:v];
+            if (![sum isEqual:[RatTerm initZERO]])
+                [result addObject: sum];
+            i++; j++;
+        }
+    }
+    
+    while (i < self.terms.count) {
+        [result addObject:[self.terms objectAtIndex:i]];
+        i++;
+    }
+    
+    while (j < p.terms.count) {
+        [result addObject: [p.terms objectAtIndex:j]];
+        j++;
+    }
+    
+    return [[RatPoly alloc] initWithTerms:[NSArray arrayWithArray: result]];
 }
 
 // Subtraction operation
@@ -103,6 +158,7 @@
     // EFFECTS: returns a RatPoly r, such that r=self-p; if [self isNaN] or [p isNaN], returns
     //            some r such that [r isNaN]
     
+    return [self add: [p negate]];
 }
 
 
@@ -111,7 +167,16 @@
     // REQUIRES: p!=nil, self != nil
     // EFFECTS: returns a RatPoly r, such that r=self*p; if [self isNaN] or [p isNaN], returns
     // some r such that [r isNaN]
+    RatPoly *result = [[RatPoly alloc] init];
+    for (RatTerm *u in self.terms) {
+        NSMutableArray *a = [NSMutableArray array];
+        for (RatTerm *v in p.terms) {
+            [a addObject:[u mul:v]];
+        }
+        result = [result add: [[RatPoly alloc] initWithTerms: [NSArray arrayWithArray: a]]];
+    }
     
+    return result;
 }
 
 
@@ -137,7 +202,17 @@
     //
     // Note that this truncating behavior is similar to the behavior of integer
     // division on computers.
+    if (p.terms.count == 0 || [self isNaN] || [p isNaN]) 
+        return [[RatPoly alloc] initWithTerm: [RatTerm initNaN]];
     
+    RatPoly *rem = self;
+    NSMutableArray *quotient = [NSMutableArray array];
+    while ([rem degree] >= [p degree]) {
+        RatTerm *q = [(RatTerm*) [rem.terms objectAtIndex: 0] div: [p.terms objectAtIndex: 0]];
+        [quotient addObject: q];
+        rem = [rem sub: [p mul: [[RatPoly alloc] initWithTerm: q]]];
+    }
+    return [[RatPoly alloc] initWithTerms: [NSArray arrayWithArray:quotient]];
 }
 
 -(double)eval:(double)d { // 5 points
@@ -146,7 +221,14 @@
     //            for example, "x+2" evaluated at 3 is 5, and "x^2-x" evaluated at 3 is 6.
     //            if [self isNaN], return NaN
     
-    
+    if ([self isNaN])
+        return NAN;
+    else {
+        double value = 0.0;
+        for (RatTerm *t in self.terms) 
+            value += [t eval:d];
+        return value;
+    }
 }
 
 
@@ -176,6 +258,29 @@
     // Valid example outputs include "x^17-3/2*x^2+1", "-x+1", "-1/2",
     // and "0".
     
+    if ([self isNaN])
+        return @"NaN";
+    else if (self.terms.count == 0)
+            return @"0";
+    else {
+        NSMutableString *str = [NSMutableString string];
+        
+        int i;
+        for (i = 0; i < self.terms.count; i++) {
+            RatTerm *t = [self.terms objectAtIndex:i];
+            if (i == 0) {
+                [str appendString: [t stringValue]];
+            } else {
+                if ([t.coeff isPositive]) {
+                    [str appendFormat: @"+%@", [t stringValue]];
+                } else {
+                    [str appendString: [t stringValue]];
+                }
+            }
+        }
+        
+        return [NSString stringWithString: str];
+    }
 }
 
 
@@ -185,7 +290,31 @@
     //              expresses a poly in the form defined in the stringValue method.
     //              Valid inputs include "0", "x-10", and "x^3-2*x^2+5/3*x+3", and "NaN".
     // EFFECTS : return a RatPoly p such that [p stringValue] = str
-    
+    if ([str isEqual: @"NaN"] || [str isEqual: @"-NaN"]) {
+        return [[RatPoly alloc] initWithTerm:[RatTerm initNaN]];
+    } else if ([str isEqual:@"0"]) {
+        return [[RatPoly alloc] init];
+    } else {
+        NSString *norm = [str stringByReplacingOccurrencesOfString:@"-" 
+                                                        withString:@"+-"
+                                                           options:NSLiteralSearch
+                                                             range:NSMakeRange(0, str.length)];
+        
+        norm = [norm stringByReplacingOccurrencesOfString:@"-NaN" 
+                                              withString:@"NaN"
+                                                 options:NSLiteralSearch
+                                                   range:NSMakeRange(0, str.length)];
+        
+        NSArray *tokens = [norm componentsSeparatedByString: @"+"];
+        
+        NSMutableArray *a = [NSMutableArray array];
+        for (NSString *str in tokens) {
+            if (![str isEqual:@""])
+                [a addObject: [RatTerm valueOf: str]];
+        }
+        
+        return [[RatPoly alloc] initWithTerms: [NSArray arrayWithArray: a]];
+    }
 }
 
 // Equality test
@@ -193,7 +322,16 @@
     // REQUIRES: self != nil
     // EFFECTS: returns YES if and only if "obj" is an instance of a RatPoly, which represents
     //            the same rational polynomial as self. All NaN polynomials are considered equal
-    
+    if ([obj isKindOfClass: [RatPoly class]]) {
+        RatPoly *o = (RatPoly*) obj;
+        if ([self isNaN] && [obj isNaN])
+            return YES;
+        
+        if ([self.terms isEqualToArray:o.terms])
+            return YES;
+    }
+            
+    return NO;
 }
 
 @end
@@ -204,13 +342,14 @@
  ========
  
  Let us define the negation operation: r = -p
- set r = p by making a term-by-term copy of all terms of p into r
- foreach term tr in r:
-    negate the coefficient of tr
+ set r = empty polynomial
+ foreach term tp in p:
+    insert term tr, which is the negation of the term tp,
+        into r
  
  The subtraction operation: r = p - q can then be defined:
- set r = -q by applying negation operation
- set r = r + p by applying addition operation
+ set t = -q by applying negation operation
+ set r = p + t by applying addition operation
  
  Question 1(b)
  ========
@@ -221,24 +360,27 @@
     set m = zero polynomial
     for each term tq in q:
         insert new term tm whose coefficient is the product
-        of the coefficient of tp and tq, and exponent is 
-        the sum of the exponent of tp and tq
+            of the coefficient of tp and tq, and exponent is 
+            the sum of the exponent of tp and tq
     set r = r + m by applying addition operation
-        
+ 
  Question 1(c)
  ========
  
  q = u / v
+ if v is zero polynomial or u is NaN polynomial or v is NaN polynomial
+    set q = NaN polynomial and return
+ 
  set q = zero polynomial
- set m = p by making a term-by-term copy of all term of u into m
+ set m to refer to u
  while degree of m is larger than or equal to degree of v
     let tm be the term with the largest exponent in m
     let tv be the term with the largest exponent in v
-    insert new term tq whose coefficient is the quotient of 
-    the coefficients of tm and tv and exponent is the difference
-    between the exponents of tm and tv
-    set d = (quotient of coefficents of tm and tv) * v
-    set m = m - d;
+    insert new term tq, whose coefficient is the quotient of 
+        the coefficients of tm and tv and exponent is the difference
+        between the exponents of tm and tv, into q
+    set d = tq * v
+    set m = m - d
  
  
  Question 2(a)
@@ -277,19 +419,24 @@
         These 2 lines may result in overflow, even in the original version.
         long a = self.numer * otherRatNum.denom;
         long b = otherRatNum.numer * self.denom;)
-    // TODO: Incomplete
+ // TODO: Incomplete
  
  Question 2(d)
  ========
  
- <Your answer here>
+ It is sufficient to call checkRep only at the end of the constructors because
+ RatNum is an immutable class. The rep of RatNum is only modified at constructor.
+ A RatNum object is created when we need to record the new value of an operation,
+ and the constructor will be called in this case. Therefore, we only need to check
+ whether the object is created correctly at the constructor.
  
  Question 3(a)
  ========
  
  In the case of RatTerm class, only at the end of the constructors. The RatTerm class
  is immutable, so the constructors are the only places the value of the rep can be
- modified.
+ modified. (Operations will create new RatTerm object whenever new values need to
+ be recorded, and the operations will call the constructor to create new objects).
  
  Question 3(b)
  ========
