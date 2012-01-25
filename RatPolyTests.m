@@ -6,9 +6,9 @@
 //  Copyright 2011 National University of Singapore. All rights reserved.
 //
 
-/* skeleton unit test implementation */
-
 #import "RatPolyTests.h"
+
+#define EPSILON 0.0000000001
 
 
 @implementation RatPolyTests
@@ -94,6 +94,9 @@ RatPoly* polyFromStr(NSString* str) {
                          poly([NSArray arrayWithObjects: termFromStr(@"34*x^7"), termFromStr(@"-45*x^6"),
                                termFromStr(@"-x^5"), termFromStr(@"34*x"), termFromStr(@"43"), nil]),
                          @"", @"");
+    STAssertEqualObjects(polyFromStr(@"-5/7*x^8+1/2*x"), 
+                         poly([NSArray arrayWithObjects: termFromStr(@"-5/7*x^8"), termFromStr(@"1/2*x"), nil]),
+                         @"", @"");
 }
 
 -(void)testZeroCoeff {
@@ -112,6 +115,14 @@ RatPoly* polyFromStr(NSString* str) {
     STAssertThrows(polyFromStr(@"NaN-x"), @"", @"");
     STAssertThrows(polyFromStr(@"9*x^15+6*x^4-45*x^3+x^70"), @"", @"");
     STAssertThrows(polyFromStr(@"x^5+x^5+x^4-x"), @"", @"");
+}
+
+-(void)testIsNaN {
+    STAssertTrue([polyFromTerm(termFromStr(@"NaN*x^6")) isNaN], @"", @"");
+    STAssertTrue([polyFromStr(@"x^5-NaN*x^3") isNaN], @"", @"");
+    STAssertTrue([polyFromStr(@"1/0*x^5") isNaN], @"", @"");
+    STAssertFalse([polyFromStr(@"34*x^7-45*x^6-x^5+34*x+43") isNaN], @"", @"");
+    STAssertFalse([zeroPoly isNaN], @"", @"");
 }
 
 -(void)testDegree {
@@ -144,7 +155,6 @@ RatPoly* polyFromStr(NSString* str) {
     STAssertEqualObjects([polyFromStr(@"3/4*x^4-1/2*x+45/23") add:polyFromStr(@"3/5*x^4+1/7*x^2+1/9*x")], 
                          polyFromStr(@"27/20*x^4+1/7*x^2-7/18*x+45/23"), @"", @"");
     
-    // There are less test cases for subtraction
     STAssertEqualObjects([polyFromStr(@"x^6") sub: polyFromStr(@"x^6")], zeroPoly, @"", @"");
     STAssertEqualObjects([polyFromStr(@"x^3-2*x^2+3*x") sub: polyFromStr(@"-x^3-2*x^2+x+8")], polyFromStr(@"2*x^3+2*x-8"), @"", @"");
     STAssertEqualObjects([polyFromStr(@"x^4+5*x^3-5") sub: polyFromStr(@"x^8+34")], polyFromStr(@"-x^8+x^4+5*x*3-39"), @"", @"");
@@ -155,7 +165,9 @@ RatPoly* polyFromStr(NSString* str) {
 
 -(void)testMul {
     STAssertEqualObjects([polyFromStr(@"0") mul: polyFromStr(@"-8*x^3+7*x^2")], zeroPoly, @"", @"");
+    STAssertEqualObjects([polyFromStr(@"45") mul: polyFromStr(@"12/9")], polyFromStr(@"60"), @"", @"");
     STAssertEqualObjects([polyFromStr(@"7/5*x^5-NaN*x^4+x") mul: polyFromStr(@"x^3-6*x")], simpleNaN, @"", @"");
+    STAssertEqualObjects([polyFromStr(@"x-1") mul: polyFromStr(@"x+1")], polyFromStr(@"x^2-1"), @"", @"");
     STAssertEqualObjects([polyFromStr(@"x^2-4/5*x-1/9") mul: polyFromStr(@"-3*x^4+5/6")], 
                          polyFromStr(@"-3*x^6+12/5*x^5+1/3*x^4+5/6*x^2-2/3*x-5/54"), @"", @"");
     STAssertEqualObjects([polyFromStr(@"-x^2+4*x+7") mul: polyFromStr(@"-4*x^2+7*x-3")], polyFromStr(@"4*x^4-23*x^3+3*x^2+37*x-21"), @"", @"");
@@ -163,6 +175,7 @@ RatPoly* polyFromStr(NSString* str) {
 
 -(void)testDiv{
     STAssertEqualObjects([polyFromStr(@"-x^2-5/4*x") div: polyFromStr(@"4*x^5")], zeroPoly, @"", @"");
+    STAssertEqualObjects([polyFromStr(@"34*x^8-7/5*x^3") div: polyFromStr(@"-13*x^8-23")], polyFromStr(@"-34/13"), @"", @"");
     STAssertEqualObjects([polyFromStr(@"x^3-1") div: polyFromStr(@"x-1")], polyFromStr(@"x^2+x+1"), @"", @"");
     STAssertEqualObjects([polyFromStr(@"x^3+7") div: polyFromStr(@"x^2-2/3*x+3/4")], polyFromStr(@"x+2/3"), @"", @"");
     STAssertEqualObjects([poly([NSArray arrayWithObjects: termFromStr(@"7/5*x^5"), termFromStr(@"NaN*x^4"), termFromStr(@"-x"), nil]) 
@@ -173,7 +186,23 @@ RatPoly* polyFromStr(NSString* str) {
 }
 
 -(void)testEval {
-    
+    STAssertEqualsWithAccuracy([polyFromStr(@"-3*x^6+12/5*x^5+1/3*x^4+5/6*x^2-2/3*x-5/54") eval: -4.0/3.0],
+                               -19147./810, EPSILON, @"", @"");
+    STAssertEqualsWithAccuracy([polyFromStr(@"x^2-1") eval:0], -1., EPSILON, @"", @"");
+    STAssertEqualsWithAccuracy([polyFromStr(@"3874/54") eval:2342], 3874./54, EPSILON, @"", @"");
+    STAssertEquals([polyFromTerm(termFromStr(@"NaN*x^6")) eval: 4.5], (double) NAN, @"", @"");
+    STAssertEquals([complexNaN eval:342.4], (double) NAN, @"", @"");
+    STAssertEquals([zeroPoly eval:234], 0., @"", @"");
+}
+
+-(void)testStringValue {
+    STAssertEqualObjects([polyFromStr(@"-3*x^6+12/5*x^5+1/3*x^4+5/6*x^2-2/3*x-5/54") stringValue], 
+                         @"-3*x^6+12/5*x^5+1/3*x^4+5/6*x^2-2/3*x-5/54", @"", @"");
+    STAssertEqualObjects([poly([NSArray arrayWithObjects: termFromStr(@"34*x^7"), termFromStr(@"-45*x^6"),
+                               termFromStr(@"-x^5"), termFromStr(@"34*x"), termFromStr(@"43"), nil]) stringValue], 
+                         @"34*x^7-45*x^6-x^5+34*x+43", @"", @"");
+    STAssertEqualObjects([polyFromStr(@"7/5*x^5-NaN*x^4+x") stringValue], @"NaN", @"", @"");
+    STAssertEqualObjects([zeroPoly stringValue], @"0", @"", @"");
 }
 
 @end
