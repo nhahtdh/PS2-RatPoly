@@ -27,6 +27,7 @@
     for (i = 0; i < terms.count; i++) {
         RatTerm *t = [terms objectAtIndex: i];
         /*
+        // Is it possible to insert nil reference into a NSArray or NSArrayMutable?
         if (t == nil)
             [NSException raise: @"RatPoly invariant violated" format: @"Nil term at index %d", i]; */
         if ([t.coeff isEqual: [RatNum initZERO]])
@@ -169,11 +170,11 @@
     // some r such that [r isNaN]
     RatPoly *result = [[RatPoly alloc] init];
     for (RatTerm *u in self.terms) {
-        NSMutableArray *a = [NSMutableArray array];
+        NSMutableArray *polyTerms = [NSMutableArray array];
         for (RatTerm *v in p.terms) {
-            [a addObject:[u mul:v]];
+            [polyTerms addObject:[u mul:v]];
         }
-        result = [result add: [[RatPoly alloc] initWithTerms: [NSArray arrayWithArray: a]]];
+        result = [result add: [[RatPoly alloc] initWithTerms: [NSArray arrayWithArray: polyTerms]]];
     }
     
     return result;
@@ -205,12 +206,12 @@
     if (p.terms.count == 0 || [self isNaN] || [p isNaN]) 
         return [[RatPoly alloc] initWithTerm: [RatTerm initNaN]];
     
-    RatPoly *rem = self;
+    RatPoly *remainder = self;
     NSMutableArray *quotient = [NSMutableArray array];
-    while ([rem degree] >= [p degree]) {
-        RatTerm *q = [(RatTerm*) [rem.terms objectAtIndex: 0] div: [p.terms objectAtIndex: 0]];
+    while ([remainder degree] >= [p degree]) {
+        RatTerm *q = [(RatTerm*) [remainder.terms objectAtIndex: 0] div: [p.terms objectAtIndex: 0]];
         [quotient addObject: q];
-        rem = [rem sub: [p mul: [[RatPoly alloc] initWithTerm: q]]];
+        remainder = [remainder sub: [p mul: [[RatPoly alloc] initWithTerm: q]]];
     }
     return [[RatPoly alloc] initWithTerms: [NSArray arrayWithArray:quotient]];
 }
@@ -295,25 +296,25 @@
     } else if ([str isEqual:@"0"]) {
         return [[RatPoly alloc] init];
     } else {
-        NSString *norm = [str stringByReplacingOccurrencesOfString:@"-" 
+        NSString *normalizedString = [str stringByReplacingOccurrencesOfString:@"-" 
                                                         withString:@"+-"
                                                            options:NSLiteralSearch
                                                              range:NSMakeRange(0, str.length)];
         
-        norm = [norm stringByReplacingOccurrencesOfString:@"-NaN" 
+        normalizedString = [normalizedString stringByReplacingOccurrencesOfString:@"-NaN" 
                                               withString:@"NaN"
                                                  options:NSLiteralSearch
                                                    range:NSMakeRange(0, str.length)];
         
-        NSArray *tokens = [norm componentsSeparatedByString: @"+"];
+        NSArray *tokens = [normalizedString componentsSeparatedByString: @"+"];
         
-        NSMutableArray *a = [NSMutableArray array];
+        NSMutableArray *polyTerms = [NSMutableArray array];
         for (NSString *str in tokens) {
             if (![str isEqual:@""])
-                [a addObject: [RatTerm valueOf: str]];
+                [polyTerms addObject: [RatTerm valueOf: str]];
         }
         
-        return [[RatPoly alloc] initWithTerms: [NSArray arrayWithArray: a]];
+        return [[RatPoly alloc] initWithTerms: [NSArray arrayWithArray: polyTerms]];
     }
 }
 
@@ -413,13 +414,12 @@
  requirement. There is no need to remove the code to simplify the rational 
  number.
  
- List of methods that need to be changed:
+ List of methods that need to be changed, the changes are minor:
     checkRep: remove the whole clause: if (denom > 0) { ... }
-    (compareTo:
-        These 2 lines may result in overflow, even in the original version.
-        long a = self.numer * otherRatNum.denom;
-        long b = otherRatNum.numer * self.denom;)
- // TODO: Incomplete
+    stringValue: have to simplify before printing
+    add, (sub), mul, div: need to simplify before doing normal calculation
+        to avoid overflow on cases that the class actually can handle.
+    isEqual: need small change in the implementation (simplify or multiply)
  
  Question 2(d)
  ========
@@ -441,45 +441,62 @@
  Question 3(b)
  ========
  
- If the class is already implemented, we can enforce the old invariants on the exit
- to reduce the amount of modifications (as long as there is no conflict).
+ I will only list methods that need to be modified from the my implementation of RatTerm
+ class. Different implementation may need to be modified more or less.
  
- List of methods that need to be changed:
- 
+ List of methods that need to be changed, the changes are minor:
+    checkRep: remove the invariant check
+    stringValue: need to handle zero RatTerm separately
+    isEqual: need to handle zero RatTerm separately
  
  Question 3(c)
  ========
  
- <Your answer here>
+ I will only list methods that need to be modified from the my implementation of RatTerm
+ class. Different implementation may need to be modified more or less.
+ 
+ List of methods that need to be changed, the changes are minor:
+    checkRep: add invariant check
+    initWithCoeff: check for NaN RatNum and assign the expt accordingly
+    mul, div: in case either self or arg is NaN term, we need to take care separately
+    (No change in stringValue, since all NaN terms are forced to output "NaN")
+    valueOf: need to map the case of "NaN*x^5" to NaN
  
  Question 3(d)
  ========
  
- Only the second one.
+ The first one will make polynomials such as "NaN*x^5+3" invalid in RatPoly, since all
+ NaN terms are mapped to NaN(*x^0). However, if NaN polynomial is not consider significant
+ to have a concrete representation, it is OK to have this invariant in RatTerm.
  
- If coefficient is 0, which means the term is 0, it is safe to set the exponent to 0
- to make the implementation of other functions easier.
+ The second one is OK, since zero term is not significant. It is OK to map all terms with
+ zero coeff to 0.
  
- The first one is no good, since it will not allow constant to be a term. // TODO: Check this again!
+ Therefore, I prefer only the second one.
  
  Question 5: Reflection (Bonus Question)
  ==========================
  (a) How many hours did you spend on each problem of this problem set?
  
- <Your answer here>
+ Part 1: Around 2 hours (take some time to configure and update the iOS on iPad)
+ Part 2:
+    Problem 3: Around 4-5 hours (excluding answering questions)
+    Problem 4: Around 4-5 hours (excluding answering questions)
+ I didn't take note of the time taken to answer questions, probably 2-3 hours in total.
  
  (b) In retrospect, what could you have done better to reduce the time you spent solving this problem set?
  
- <Your answer here>
+ Getting used to the interface and control on MacOS and Xcode.
+ Getting used to the syntax of Obj-C.
  
  (c) What could the CS3217 teaching staff have done better to improve your learning experience in this problem set?
  
  This mode of learning is good. I can learn a lot of things myself at my own speed. The examples provided are
- good reference when learning a new language.
+ good reference when learning a new programming language.
  
  However, there are some points I would like to comment on:
  - Please clean up the comments from the last year to avoid confusion.
  - Please list out the changes that have been made to the source code. It is very annoying every time the source code 
- is reuploaded to the workbin, but we don't know about the changes in the code.
+   is reuploaded to the workbin, but we don't know about the changes in the code.
  
  */

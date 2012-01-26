@@ -77,7 +77,7 @@ RatPoly* polyFromStr(NSString* str) {
     p = polyFromStr(@"34*x^2-453*x+1");
     STAssertEqualObjects([p getTerm:2], termFromStr(@"34*x^2"), @"", @"");
     STAssertEqualObjects([p getTerm:1], termFromStr(@"-453*x"), @"", @"");
-    
+    STAssertEqualObjects([p getTerm:-5], zeroTerm, @"", @"");
     // NaN polynomial is not tested, since degree is not defined for NaN polynomial
 }
 
