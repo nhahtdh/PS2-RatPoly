@@ -207,8 +207,9 @@
         return [[RatPoly alloc] initWithTerm: [RatTerm initNaN]];
     
     RatPoly *remainder = self;
+    RatPoly *zeroPoly = [[RatPoly alloc] init];
     NSMutableArray *quotient = [NSMutableArray array];
-    while ([remainder degree] >= [p degree]) {
+    while ([remainder degree] >= [p degree] && ![remainder isEqual:zeroPoly]) {
         RatTerm *q = [(RatTerm*) [remainder.terms objectAtIndex: 0] div: [p.terms objectAtIndex: 0]];
         [quotient addObject: q];
         remainder = [remainder sub: [p mul: [[RatPoly alloc] initWithTerm: q]]];

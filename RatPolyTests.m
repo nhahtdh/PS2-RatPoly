@@ -183,6 +183,8 @@ RatPoly* polyFromStr(NSString* str) {
                          simpleNaN, @"", @"");
     STAssertEqualObjects([polyFromStr(@"x^5-4/5*x") div: zeroPoly], simpleNaN, @"", @"");
     STAssertEqualObjects([zeroPoly div: polyFromStr(@"-3*x^5-7/8")], zeroPoly, @"", @"");
+    STAssertEqualObjects([polyFromStr(@"34") div: polyFromStr(@"2")], polyFromStr(@"17"), @"", @"");
+    STAssertEqualObjects([polyFromStr(@"x^3-3") div: polyFromStr(@"-2")], polyFromStr(@"-1/2*x^3+3/2"), @"", @"");
 }
 
 -(void)testEval {
